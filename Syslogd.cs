@@ -232,18 +232,25 @@ namespace SysLogMonitor {
                 }
             }
 
+            public static readonly Regex mRegex = new Regex("<(?<PRI>([0-9]{1,3}))>" +
+                        "(?:" +
+                            "(?<Ver>[0-9]{1,3}) (?<TS>[0-9-]{10}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z) " +
+                            "|" +
+                            "(?<TS>[A-Za-z]{3} [0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2}) " +
+                        ")" +
+                        "(?<Host>[^ ]{1,255}) " +
+                        "(?<App>[^ [:]{1,48})" +
+                        "(?:" +
+                            "(?:\\[(?<PID>[^ ]{1,128})\\])?: " +
+                            "|"+
+                            " (?<PID>[^ ]{1,128}) (?<MID>[^ ]{1,32}) " +
+                        ")"+
+                        "(?<Message>.*)", RegexOptions.Compiled);
             public MessageStruct(string Message, EndPoint RemoteEP) {
                 this.Source = RemoteEP;
                 raw = Message;
                 this.StructuredData = new Dictionary<string, string>();
                 try {
-                    Regex mRegex = new Regex("<(?<PRI>([0-9]{1,3}))>(?<Ver>[0-9]{1,3}) " +
-                        "(?<TS>[0-9A-Z:.-]{1,40}) " +
-                        "(?<Host>[^ ]{1,255}) " +
-                        "(?<App>[^ ]{1,48}) " +
-                        "(?<PID>[^ ]{1,128}) " +
-                        "(?<MID>[^ ]{1,32}) " +
-                        "(?<Message>.*)", RegexOptions.Compiled);
                     Match tmpMatch = mRegex.Match(Message);
                     if (!tmpMatch.Success) {
                         throw new Exception("invalid protocol");
@@ -264,13 +271,17 @@ namespace SysLogMonitor {
                     this.AppName = "SYSLOGMONITOR";
                     this.ProcID = "-";
                     this.MsgID = "ProtoERR";
+                    Console.WriteLine("ProtoERR in message: " + Message);
                     this.Message = ex.Message + " ;; " + Message;
+                    Console.WriteLine("Error: " + ex.Message);
+
                     return;
                 }
             }
 
             public void parseStructuredData() {
                 char[] m = Message.ToCharArray();
+                if (m[0] != '[' && m[0] != '-') return;
                 bool inStr, inBr, escaped;
                 int i;
                 for (i = 0; i < m.Length; i++) {
